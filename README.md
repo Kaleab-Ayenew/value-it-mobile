@@ -47,21 +47,3 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 adb reverse tcp:8000 tcp:8000
 flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
 ```
-
-## Features (tiers 1–3)
-
-**Manager:** project search/filter, detail timeline, assign with availability, report approve/reject, PDF export & email (SMTP), in-app notifications, analytics, clients, users, materials CRUD + CSV import, audit log.
-
-**Valuer:** draft/submit reports, manager feedback on rejection, materials reference, project chat.
-
-**Inspector:** inspection checklist, compressed photo upload (MinIO), offline inspection drafts (`shared_preferences`).
-
-**All roles:** notifications, project chat, English/Amharic UI toggle (EN/AM in app bar).
-
-## Project structure
-
-```
-mobile_project/
-├── backend/          # FastAPI + PostgreSQL + MinIO
-└── valueit_app/      # Flutter (Android, iOS, Web, Desktop)
-```
