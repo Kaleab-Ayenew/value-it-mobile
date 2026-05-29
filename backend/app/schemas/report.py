@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LineItem(BaseModel):
@@ -15,7 +15,11 @@ class LineItem(BaseModel):
 class ReportCreate(BaseModel):
     line_items: list[LineItem]
     notes: str | None = None
-    status: str = "Submitted"
+    status: str = "Draft"
+
+
+class ReportReject(BaseModel):
+    feedback: str = Field(min_length=1)
 
 
 class ReportResponse(BaseModel):
@@ -25,6 +29,9 @@ class ReportResponse(BaseModel):
     report_content: str | None
     calculated_value: Decimal | None
     status: str
+    manager_feedback: str | None = None
     report_date: datetime
+    line_items: list[LineItem] | None = None
+    notes: str | None = None
 
     model_config = {"from_attributes": True}

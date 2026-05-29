@@ -18,6 +18,7 @@ class ValuationReport(Base):
     report_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     calculated_value: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="Draft")
+    manager_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     report_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -9,10 +9,11 @@ import '../../shared/api_service.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/feedback.dart';
-import 'manager_home.dart';
+import '../../shared/projects_provider.dart';
 
-final _usersProvider = FutureProvider.autoDispose.family<List<UserModel>, String>((ref, role) {
-  return ref.watch(apiServiceProvider).users(role: role, status: 'Active');
+final _availabilityProvider =
+    FutureProvider.autoDispose.family<List<UserAvailabilityModel>, String>((ref, role) {
+  return ref.watch(apiServiceProvider).userAvailability(role);
 });
 
 class AssignScreen extends ConsumerStatefulWidget {
@@ -32,8 +33,8 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final valuers = ref.watch(_usersProvider('Valuer'));
-    final inspectors = ref.watch(_usersProvider('SiteInspector'));
+    final valuers = ref.watch(_availabilityProvider('Valuer'));
+    final inspectors = ref.watch(_availabilityProvider('SiteInspector'));
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -81,7 +82,12 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                           items: [
                             const DropdownMenuItem(value: null, child: Text('Select valuer')),
                             ...valuerList.map(
-                              (u) => DropdownMenuItem(value: u.userId, child: Text(u.fullName)),
+                              (u) => DropdownMenuItem(
+                                value: u.userId,
+                                child: Text(
+                                  '${u.fullName}${u.available ? '' : ' (${u.activeProjects} active)'}',
+                                ),
+                              ),
                             ),
                           ],
                           onChanged: (v) => setState(() => _valuerId = v),
@@ -92,7 +98,12 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                           items: [
                             const DropdownMenuItem(value: null, child: Text('Select inspector')),
                             ...inspectorList.map(
-                              (u) => DropdownMenuItem(value: u.userId, child: Text(u.fullName)),
+                              (u) => DropdownMenuItem(
+                                value: u.userId,
+                                child: Text(
+                                  '${u.fullName}${u.available ? '' : ' (${u.activeProjects} active)'}',
+                                ),
+                              ),
                             ),
                           ],
                           onChanged: (v) => setState(() => _inspectorId = v),

@@ -8,7 +8,9 @@ import '../../core/design_tokens.dart';
 import '../../shared/shell.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/feedback.dart';
-import '../projects/manager_home.dart';
+import '../../shared/projects_provider.dart';
+import '../../shared/widgets/notifications_button.dart';
+import '../../shared/widgets/project_search_bar.dart';
 import 'materials_screen.dart';
 
 class ValuerHome extends ConsumerStatefulWidget {
@@ -30,6 +32,7 @@ class _ValuerHomeState extends ConsumerState<ValuerHome> {
           : 'Reference prices for line-item calculations',
       selectedIndex: _tab,
       onSelect: (i) => setState(() => _tab = i),
+      actions: const [NotificationsButton()],
       destinations: const [
         NavigationDestination(icon: Icon(Icons.calculate_outlined), label: 'Projects'),
         NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Materials'),
@@ -64,27 +67,31 @@ class _ProjectsTab extends ConsumerWidget {
           color: AppColors.brand,
           onRefresh: () async => ref.invalidate(projectsProvider),
           child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
             children: [
-              PageHeader(
-                title: '${projects.length} projects',
+              const ProjectSearchBar(),
+              const PageHeader(
+                title: 'Your projects',
                 subtitle: 'Tap to review inspection and submit valuation',
               ),
               ...projects.map(
-                (p) => ProjectListCard(
-                  title: p.projectName,
-                  subtitle: p.location ?? '—',
-                  status: p.status,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentLight,
-                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                (p) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: ProjectListCard(
+                    title: p.projectName,
+                    subtitle: p.location ?? '—',
+                    status: p.status,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentLight,
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                      ),
+                      child: const Icon(Icons.request_quote_outlined, color: AppColors.accent, size: 22),
                     ),
-                    child: const Icon(Icons.request_quote_outlined, color: AppColors.accent, size: 22),
+                    onTap: () => context.push('/project/${p.projectId}?role=Valuer'),
                   ),
-                  onTap: () => context.push('/valuer/project/${p.projectId}'),
                 ),
               ),
             ],

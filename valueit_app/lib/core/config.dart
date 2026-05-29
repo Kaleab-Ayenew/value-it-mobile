@@ -5,5 +5,10 @@ class AppConfig {
   );
 
   static String get apiV1 => '$apiBaseUrl/api/v1';
-  static String uploadUrl(String path) => '$apiBaseUrl/uploads/$path';
+
+  /// Resolves photo URL from API (`url` field) or legacy local uploads path.
+  static String photoUrl({required String filePath, String? url}) {
+    if (url != null && url.isNotEmpty) return url;
+    return '$apiBaseUrl/uploads/$filePath';
+  }
 }

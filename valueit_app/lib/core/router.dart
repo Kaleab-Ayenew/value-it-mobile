@@ -10,8 +10,10 @@ import '../features/inspection/inspection_form_screen.dart';
 import '../features/inspection/inspector_home.dart';
 import '../features/projects/assign_screen.dart';
 import '../features/projects/manager_home.dart';
+import '../features/projects/project_detail_screen.dart';
 import '../features/projects/project_form_screen.dart';
 import '../features/projects/report_review_screen.dart';
+import '../features/shared/notifications_screen.dart';
 import '../features/valuation/valuation_screen.dart';
 import '../features/valuation/valuer_home.dart';
 
@@ -43,6 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/pending', builder: (_, __) => const PendingScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/manager', builder: (_, __) => const ManagerHome()),
       GoRoute(path: '/manager/project/new', builder: (_, __) => const ProjectFormScreen()),
       GoRoute(
@@ -52,6 +55,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/manager/project/:id/report',
         builder: (_, s) => ReportReviewScreen(projectId: int.parse(s.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/project/:id',
+        builder: (_, s) => ProjectDetailScreen(
+          projectId: int.parse(s.pathParameters['id']!),
+          role: s.uri.queryParameters['role'] ?? 'Manager',
+        ),
       ),
       GoRoute(path: '/valuer', builder: (_, __) => const ValuerHome()),
       GoRoute(

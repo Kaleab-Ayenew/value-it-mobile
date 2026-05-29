@@ -7,7 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/design_tokens.dart';
 import '../../shared/api_service.dart';
 import '../../shared/widgets/feedback.dart';
-import 'manager_home.dart';
+import '../../shared/projects_provider.dart';
 
 class ProjectFormScreen extends ConsumerStatefulWidget {
   const ProjectFormScreen({super.key});

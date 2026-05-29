@@ -5,9 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import auth, clients, materials, projects, users
+from app.routers import (
+    analytics,
+    audit,
+    auth,
+    chat,
+    clients,
+    materials,
+    notifications,
+    projects,
+    users,
+)
 
-app = FastAPI(title="ValueIt API", version="1.0.0")
+app = FastAPI(title="ValueIt API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,7 +34,11 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(clients.router, prefix="/api/v1")
 app.include_router(projects.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
 app.include_router(materials.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(audit.router, prefix="/api/v1")
 
 
 @app.get("/health")

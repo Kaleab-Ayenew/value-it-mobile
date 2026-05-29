@@ -18,6 +18,7 @@ class Inspection(Base):
     observations: Mapped[str | None] = mapped_column(Text, nullable=True)
     measurements: Mapped[str | None] = mapped_column(Text, nullable=True)
     remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    checklist_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="Submitted")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -22,6 +22,7 @@ class ProjectUpdate(BaseModel):
     status: str | None = None
     start_date: date | None = None
     end_date: date | None = None
+    archived: bool | None = None
 
 
 class ProjectAssign(BaseModel):
@@ -38,6 +39,7 @@ class ProjectResponse(BaseModel):
     valuer_id: int | None
     inspector_id: int | None
     status: str
+    archived: bool = False
     start_date: date | None
     end_date: date | None
     created_at: datetime

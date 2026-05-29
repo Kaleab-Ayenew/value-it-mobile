@@ -8,7 +8,9 @@ import '../../core/design_tokens.dart';
 import '../../shared/shell.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/feedback.dart';
-import '../projects/manager_home.dart';
+import '../../shared/projects_provider.dart';
+import '../../shared/widgets/notifications_button.dart';
+import '../../shared/widgets/project_search_bar.dart';
 
 class InspectorHome extends ConsumerWidget {
   const InspectorHome({super.key});
@@ -22,6 +24,7 @@ class InspectorHome extends ConsumerWidget {
       subtitle: 'Assigned valuation projects awaiting field data',
       selectedIndex: 0,
       onSelect: (_) {},
+      actions: const [NotificationsButton()],
       destinations: const [
         NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Assignments'),
       ],
@@ -43,27 +46,31 @@ class InspectorHome extends ConsumerWidget {
             color: AppColors.brand,
             onRefresh: () async => ref.invalidate(projectsProvider),
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
               children: [
-                PageHeader(
-                  title: '${projects.length} assignments',
+                const ProjectSearchBar(showStatusFilter: false),
+                const PageHeader(
+                  title: 'Assignments',
                   subtitle: 'Open a project to submit inspection data and photos',
                 ),
                 ...projects.map(
-                  (p) => ProjectListCard(
-                    title: p.projectName,
-                    subtitle: p.location ?? 'Location TBD',
-                    status: p.status,
-                    leading: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.infoBg,
-                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                  (p) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    child: ProjectListCard(
+                      title: p.projectName,
+                      subtitle: p.location ?? 'Location TBD',
+                      status: p.status,
+                      leading: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.infoBg,
+                          borderRadius: BorderRadius.circular(AppRadii.sm),
+                        ),
+                        child: const Icon(Icons.camera_alt_outlined, color: AppColors.info, size: 22),
                       ),
-                      child: const Icon(Icons.camera_alt_outlined, color: AppColors.info, size: 22),
+                      onTap: () => context.push('/inspector/project/${p.projectId}'),
                     ),
-                    onTap: () => context.push('/inspector/project/${p.projectId}'),
                   ),
                 ),
               ],

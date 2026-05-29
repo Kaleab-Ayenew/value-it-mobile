@@ -1,17 +1,22 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/api_client.dart';
 import '../../core/design_tokens.dart';
+import '../../core/l10n.dart';
 import '../../shared/api_service.dart';
 import '../../shared/models.dart';
+import '../../shared/projects_provider.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/feedback.dart';
 import '../../shared/widgets/status_chip.dart';
-import 'manager_home.dart';
 
 class ReportReviewScreen extends ConsumerStatefulWidget {
   const ReportReviewScreen({super.key, required this.projectId});
@@ -25,7 +30,7 @@ class ReportReviewScreen extends ConsumerStatefulWidget {
 class _ReportReviewScreenState extends ConsumerState<ReportReviewScreen> {
   ReportModel? _report;
   bool _loading = true;
-  bool _approving = false;
+  bool _busy = false;
   String? _error;
 
   @override
@@ -50,7 +55,7 @@ class _ReportReviewScreenState extends ConsumerState<ReportReviewScreen> {
   }
 
   Future<void> _approve() async {
-    setState(() => _approving = true);
+    setState(() => _busy = true);
     try {
       await ref.read(apiServiceProvider).approveReport(widget.projectId);
       ref.invalidate(projectsProvider);
@@ -63,7 +68,89 @@ class _ReportReviewScreenState extends ConsumerState<ReportReviewScreen> {
     } on DioException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     } finally {
-      if (mounted) setState(() => _approving = false);
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reject() async {
+    final feedback = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppStrings.of(context).reject),
+        content: TextField(
+          controller: feedback,
+          decoration: const InputDecoration(labelText: 'Feedback for valuer'),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true || feedback.text.trim().isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      final r = await ref.read(apiServiceProvider).rejectReport(widget.projectId, feedback.text.trim());
+      setState(() => _report = r);
+      ref.invalidate(projectsProvider);
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    setState(() => _busy = true);
+    try {
+      final bytes = await ref.read(apiServiceProvider).downloadReportPdf(widget.projectId);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/valuation_${widget.projectId}.pdf');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)], text: 'Valuation report');
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _emailReport() async {
+    final email = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Email report'),
+        content: TextField(
+          controller: email,
+          decoration: const InputDecoration(labelText: 'Recipient email'),
+          keyboardType: TextInputType.emailAddress,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true || email.text.trim().isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiServiceProvider).emailReport(widget.projectId, email.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sent')));
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -112,28 +199,58 @@ class _ReportReviewScreenState extends ConsumerState<ReportReviewScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              AppCard(
-                child: Text(
-                  r.reportContent ?? '—',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        height: 1.5,
-                      ),
+              if (r.notes?.isNotEmpty == true)
+                AppCard(
+                  child: Text(r.notes!, style: Theme.of(context).textTheme.bodyMedium),
                 ),
+              if (r.lineItems.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                ...r.lineItems.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: AppCard(
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(item.materialName)),
+                          Text(fmt.format(item.total)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _sharePdf,
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('PDF'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _emailReport,
+                      icon: const Icon(Icons.email_outlined),
+                      label: const Text('Email'),
+                    ),
+                  ),
+                ],
               ),
               if (r.status == 'Submitted') ...[
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton.icon(
-                  onPressed: _approving ? null : _approve,
-                  icon: _approving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.verified_outlined),
-                  label: const Text('Approve & complete project'),
+                  onPressed: _busy ? null : _approve,
+                  icon: const Icon(Icons.verified_outlined),
+                  label: Text(AppStrings.of(context).approve),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _reject,
+                  icon: const Icon(Icons.undo_outlined),
+                  label: Text(AppStrings.of(context).reject),
                 ),
               ],
             ],

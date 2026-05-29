@@ -11,7 +11,8 @@ import '../../shared/api_service.dart';
 import '../../shared/models.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/feedback.dart';
-import '../projects/manager_home.dart';
+import '../../core/l10n.dart';
+import '../../shared/projects_provider.dart';
 import 'materials_screen.dart';
 
 class ValuationScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
   InspectionModel? _inspection;
   final List<LineItem> _items = [];
   final _notes = TextEditingController();
+  ReportModel? _existingReport;
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -45,9 +47,23 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
 
   Future<void> _load() async {
     try {
-      final insp = await ref.read(apiServiceProvider).getInspection(widget.projectId);
+      final api = ref.read(apiServiceProvider);
+      final insp = await api.getInspection(widget.projectId);
+      ReportModel? report;
+      try {
+        report = await api.getReport(widget.projectId);
+      } on DioException catch (e) {
+        if (e.response?.statusCode != 404) rethrow;
+      }
       setState(() {
         _inspection = insp;
+        _existingReport = report;
+        if (report != null) {
+          _items
+            ..clear()
+            ..addAll(report.lineItems);
+          _notes.text = report.notes ?? '';
+        }
         _loading = false;
       });
     } on DioException catch (e) {
@@ -73,7 +89,7 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
 
   double get _total => _items.fold(0.0, (s, i) => s + i.total);
 
-  Future<void> _submit() async {
+  Future<void> _saveReport(String status) async {
     if (_items.isEmpty) {
       setState(() => _error = 'Add at least one line item');
       return;
@@ -86,14 +102,16 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
       await ref.read(apiServiceProvider).submitReport(widget.projectId, {
         'line_items': _items.map((i) => i.toJson()).toList(),
         'notes': _notes.text.trim(),
-        'status': 'Submitted',
+        'status': status,
       });
       ref.invalidate(projectsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Valuation report submitted')),
+          SnackBar(
+            content: Text(status == 'Draft' ? 'Draft saved' : 'Valuation report submitted'),
+          ),
         );
-        context.pop();
+        if (status == 'Submitted') context.pop();
       }
     } on DioException catch (e) {
       setState(() => _error = apiErrorMessage(e));
@@ -203,7 +221,10 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
                           itemBuilder: (_, i) => ClipRRect(
                             borderRadius: BorderRadius.circular(AppRadii.sm),
                             child: Image.network(
-                              AppConfig.uploadUrl(_inspection!.photos[i].filePath),
+                              AppConfig.photoUrl(
+                                filePath: _inspection!.photos[i].filePath,
+                                url: _inspection!.photos[i].url,
+                              ),
                               width: 88,
                               height: 88,
                               fit: BoxFit.cover,
@@ -291,13 +312,23 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
                   ),
                   maxLines: 3,
                 ),
+                if (_existingReport?.managerFeedback != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  InlineErrorBanner(message: 'Manager feedback: ${_existingReport!.managerFeedback}'),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   InlineErrorBanner(message: _error!),
                 ],
                 const SizedBox(height: AppSpacing.lg),
+                OutlinedButton.icon(
+                  onPressed: _saving ? null : () => _saveReport('Draft'),
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(AppStrings.of(context).saveDraft),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 FilledButton.icon(
-                  onPressed: _saving ? null : _submit,
+                  onPressed: _saving ? null : () => _saveReport('Submitted'),
                   icon: _saving
                       ? const SizedBox(
                           width: 18,
@@ -305,7 +336,7 @@ class _ValuationScreenState extends ConsumerState<ValuationScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.send_outlined),
-                  label: const Text('Submit valuation report'),
+                  label: Text(AppStrings.of(context).submitReport),
                 ),
               ],
             ),
